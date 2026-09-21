@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>3D Rendering with PBR — 1970 Ford Mustang Boss 302</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0b0e13;
+    font-family:"Segoe UI",Tahoma,sans-serif; color:#e8ecf1; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+  #hud-top { position:fixed; top:12px; left:12px; z-index:10;
+    background:rgba(10,14,20,.78); border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; padding:12px 14px; max-width:360px; backdrop-filter:blur(8px); }
+  #hud-top h1 { font-size:16px; margin-bottom:4px; }
+  #hud-top p { font-size:12px; line-height:1.5; color:#b9c4d0; }
+  #hud-top .badge { display:inline-block; font-size:11px; background:#1d2634;
+    border:1px solid #31415a; padding:2px 8px; border-radius:20px; margin:2px 2px 0 0; color:#9fd0ff; }
+  #hud-pbr { position:fixed; left:12px; bottom:12px; z-index:10;
+    background:rgba(10,14,20,.82); border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; padding:10px 14px; min-width:250px; max-width:330px;
+    font-size:12px; backdrop-filter:blur(8px); }
+  #hud-pbr h2 { font-size:13px; margin-bottom:6px; color:#ffd479; }
+  #hud-pbr .row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; color:#cfd8e3; }
+  #hud-pbr .swatch { display:inline-block; width:14px; height:14px; border-radius:4px;
+    border:1px solid #fff3; vertical-align:-2px; margin-right:6px; }
+  #hud-help { position:fixed; right:12px; bottom:12px; z-index:10; text-align:right;
+    background:rgba(10,14,20,.78); border:1px solid rgba(255,255,255,.12);
+    border-radius:12px; padding:10px 14px; font-size:12px; color:#b9c4d0; backdrop-filter:blur(8px); }
+  #hud-help b { color:#fff; }
+  #loader { position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:12px; background:#0b0e13; transition:opacity .4s; }
+  #loader .spin { width:44px; height:44px; border-radius:50%;
+    border:3px solid #2a3648; border-top-color:#4da3ff; animation:sp .9s linear infinite; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  #loader small { color:#8fa0b3; font-size:12px; }
+  #err { position:fixed; top:12px; right:12px; z-index:30; max-width:380px; display:none;
+    background:#3a1414; border:1px solid #ff7b7b; color:#ffd7d7;
+    padding:10px 14px; border-radius:10px; font-size:12px; line-height:1.5; }
+  @media (max-width:640px){ #hud-top{max-width:250px} #hud-help{display:none} }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="hud-top">
+  <h1>3D PBR Showroom — Mustang Boss 302 (1970)</h1>
+  <p>WebGL + Three.js (<code>MeshStandard/PhysicalMaterial</code>) โมเดลหลักคือรถ
+  <code>Modle3D/1970_ford_mustang_boss_302.glb</code> ฉากมี Ground / Environment / Buildings ที่เป็น PBR ทั้งหมด</p>
+  <div><span class="badge">Base Color</span><span class="badge">Metallic</span>
+  <span class="badge">Roughness</span><span class="badge">IBL Env</span><span class="badge">Shadows</span></div>
+</div>
+<div id="hud-pbr">
+  <h2>Selected PBR Material</h2>
+  <div class="row"><span>Object</span><b id="pbr-name">—</b></div>
+  <div class="row"><span>Base Color</span><b><span class="swatch" id="pbr-swatch"></span><span id="pbr-color">—</span></b></div>
+  <div class="row"><span>Metallic</span><b id="pbr-metal">—</b></div>
+  <div class="row"><span>Roughness</span><b id="pbr-rough">—</b></div>
+  <div class="row"><span>Sun</span><b id="pbr-light">—</b></div>
+</div>
+<div id="hud-help"><b>Mouse:</b> ลากหมุน • scroll ซูม • คลิกขวาลากแพน<br><b>คลิกวัตถุ:</b> ดูค่า PBR • <b>ดับเบิลคลิก:</b> โฟกัสรถ</div>
+<div id="loader"><div class="spin"></div><div>กำลังโหลดโมเดล Mustang…</div><small>ต้องเปิดผ่าน HTTP (Live Server / localhost) เพื่อให้โหลด .glb ได้</small></div>
+<div id="err"></div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// Renderer / Scene / Camera
+const container = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e13);
+scene.fog = new THREE.Fog(0x0b0e13, 40, 110);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(9, 5.2, 10);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.2, 0);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.minDistance = 3; controls.maxDistance = 60;
+
+// IBL: RoomEnvironment
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// Lights (ค่าคงที่)
+const hemi = new THREE.HemisphereLight(0xbdd3ff, 0x2a2118, 0.35);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.6);
+sun.position.set(8, 12, 6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
+sun.shadow.camera.top = 20; sun.shadow.camera.bottom = -20;
+sun.shadow.camera.far = 80; sun.shadow.bias = -0.0004;
+scene.add(sun); scene.add(sun.target);
+const sunHelper = new THREE.DirectionalLightHelper(sun, 2, 0xffd479);
+scene.add(sunHelper);
+const rim = new THREE.DirectionalLight(0x6fb3ff, 0.7);
+rim.position.set(-9, 6, -8);
+scene.add(rim);
+
+// Ground (PBR)
+const groundMat = new THREE.MeshStandardMaterial({ color:0x2b3038, roughness:0.95, metalness:0.0 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), groundMat);
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; ground.name = 'Ground';
+scene.add(ground);
+scene.add(new THREE.GridHelper(120, 60, 0x3d4a5f, 0x232b36));
+
+// Podium
+const podium = new THREE.Mesh(
+  new THREE.CylinderGeometry(5.4, 5.7, 0.25, 64),
+  new THREE.MeshStandardMaterial({ color:0x14181f, roughness:0.32, metalness:0.75 }));
+podium.position.y = 0.125; podium.receiveShadow = true; podium.name = 'Podium';
+scene.add(podium);
+const ring = new THREE.Mesh(new THREE.TorusGeometry(5.45, 0.05, 12, 100),
+  new THREE.MeshStandardMaterial({ color:0x111111, emissive:0x2f9dff, emissiveIntensity:1.6, roughness:0.4, metalness:0.2 }));
+ring.rotation.x = Math.PI/2; ring.position.y = 0.26;
+scene.add(ring);
+
+// Buildings (PBR)
+function windowTexture(w=128,h=256){
+  const c = document.createElement('canvas'); c.width=w; c.height=h;
+  const g = c.getContext('2d');
+  g.fillStyle='#20262e'; g.fillRect(0,0,w,h);
+  for(let y=8;y<h-8;y+=22) for(let x=8;x<w-8;x+=18){
+    g.fillStyle = Math.random()>0.35 ? '#ffd479' : '#0e141c';
+    g.fillRect(x,y,10,12);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  return t;
+}
+const buildingMats = [];
+function makeBuilding(x,z,w,h,d,base=0x39424f){
+  const win = windowTexture();
+  const mat = new THREE.MeshStandardMaterial({ color:base, roughness:0.72, metalness:0.25,
+    emissive:0xffffff, emissiveMap:win, emissiveIntensity:0.55, map:win });
+  buildingMats.push(mat);
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+  b.position.set(x,h/2,z); b.castShadow = b.receiveShadow = true; b.name='Building';
+  scene.add(b);
+}
+makeBuilding(-16,-10,7,10,7,0x3a4451); makeBuilding(-9,-16,6,14,6,0x414c5c);
+makeBuilding(0,-19,8,9,7); makeBuilding(10,-16,6,16,6,0x354052);
+makeBuilding(18,-9,7,11,7); makeBuilding(-19,2,6,8,6,0x2f3a47);
+makeBuilding(19,3,6,13,6); makeBuilding(-13,16,5,7,5,0x333d49);
+
+// Mustang .glb (PBR)
+const loaderBox = document.getElementById('loader');
+const errBox = document.getElementById('err');
+let car = null, bodyMats = [], glassMats = [];
+const paintParams = { baseColor:'#b3121f', metallic:0.85, roughness:0.28, clearcoat:0.8 };
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let selectedMat = null;
+
+function classify(name){
+  const n = (name||'').toLowerCase();
+  if (/glass|window|lighta/.test(n)) return 'glass';
+  if (/wheel|tire|tyre|rubber|caliper|calliper/.test(n)) return 'wheel';
+  if (/paint/.test(n)) return 'paint';
+  return 'trim';
+}
+function toPhysical(mat){
+  if (!mat || Array.isArray(mat)) return mat;
+  if (mat.isMeshPhysicalMaterial) return mat;
+  const p = new THREE.MeshPhysicalMaterial();
+  p.name = mat.name || '';
+  if (mat.color) p.color.copy(mat.color);
+  if (mat.map) p.map = mat.map;
+  if (mat.normalMap) p.normalMap = mat.normalMap;
+  if (mat.roughnessMap) p.roughnessMap = mat.roughnessMap;
+  if (mat.metalnessMap) p.metalnessMap = mat.metalnessMap;
+  if (mat.emissiveMap) p.emissiveMap = mat.emissiveMap;
+  if (mat.emissive) p.emissive.copy(mat.emissive);
+  if (mat.emissiveIntensity !== undefined) p.emissiveIntensity = mat.emissiveIntensity;
+  p.metalness = mat.metalness ?? 0.8; p.roughness = mat.roughness ?? 0.35;
+  return p;
+}
+function applyPaint(){
+  if (!bodyMats.length) return;
+  for (const m of bodyMats){
+    m.color.set(paintParams.baseColor);
+    m.metalness = paintParams.metallic;
+    m.roughness = paintParams.roughness;
+    if (m.isMeshPhysicalMaterial){ m.clearcoat = paintParams.clearcoat; m.clearcoatRoughness = 0.15; }
+    m.needsUpdate = true;
+  }
+  updatePbrPanel();
+}
+
+new GLTFLoader().load('./Modle3D/1970_ford_mustang_boss_302.glb',
+  (gltf)=>{
+    try {
+      car = gltf.scene; car.name = 'MustangBoss302';
+      car.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(car);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const s = 4.6 / Math.max(size.x, size.z);
+      car.scale.setScalar(s);
+      car.position.x -= center.x * s;
+      car.position.z -= center.z * s;
+      car.updateMatrixWorld(true);
+      const box2 = new THREE.Box3().setFromObject(car);
+      car.position.y = (podium.position.y + 0.125) - box2.min.y + 0.01;
+      car.rotation.y = -0.5;
+      car.updateMatrixWorld(true);
+      scene.add(car);
+      car.traverse(o=>{
+        if (!o.isMesh) return;
+        if (Array.isArray(o.material)){ o.material = o.material.map(toPhysical); return; }
+        o.castShadow = true; o.receiveShadow = true;
+        const kind = classify((o.material?.name||'') + ' ' + (o.name||''));
+        if (kind === 'glass'){
+          o.material.transparent = true; o.material.opacity = 0.35;
+          o.material.roughness = 0.05; o.material.metalness = 0.0; o.material.depthWrite = false;
+          glassMats.push(o.material);
+        } else if (kind === 'paint'){
+          o.material = toPhysical(o.material);
+          bodyMats.push(o.material);
+        }
+      });
+      bodyMats = [...new Set(bodyMats)]; glassMats = [...new Set(glassMats)];
+      applyPaint();
+      let first = null; car.traverse(o=>{ if(!first && o.isMesh) first = o; });
+      setSelected(first, bodyMats[0] || first?.material);
+      const cc = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
+      controls.target.copy(cc);
+      camera.position.set(cc.x+7, cc.y+4, cc.z+8);
+      controls.update();
+    } catch(err){
+      console.error(err); errBox.style.display='block'; errBox.textContent = 'จัดฉากโมเดลไม่สำเร็จ: ' + err.message;
+      if (car && !car.parent) scene.add(car);
+    } finally {
+      loaderBox.style.opacity='0'; setTimeout(()=>loaderBox.remove(),450);
+    }
+  },
+  (xhr)=>{ if (xhr.total) loaderBox.querySelector('div:nth-child(2)').textContent =
+    `กำลังโหลดโมเดล Mustang… ${Math.round(xhr.loaded/xhr.total*100)}%`; },
+  (e)=>{ console.error(e); errBox.style.display='block';
+    errBox.innerHTML = location.protocol==='file:'
+      ? '⚠️ โหลด .glb ไม่สำเร็จ — เปิดแบบ <b>file://</b> ให้รันผ่าน <b>Live Server / localhost</b> แทน'
+      : '⚠️ โหลด <b>Modle3D/1970_ford_mustang_boss_302.glb</b> ไม่สำเร็จ'; 
+    loaderBox.style.opacity='0'; setTimeout(()=>loaderBox.remove(),450); }
+);
+
+// PBR panel + picking
+const elName=document.getElementById('pbr-name'), elCol=document.getElementById('pbr-color'),
+  elSw=document.getElementById('pbr-swatch'), elMet=document.getElementById('pbr-metal'),
+  elRo=document.getElementById('pbr-rough'), elLi=document.getElementById('pbr-light');
+function setSelected(obj, mat){ selectedMat = mat || obj?.material; updatePbrPanel(obj); }
+function updatePbrPanel(obj){
+  const m = selectedMat;
+  elName.textContent = obj?.name || m?.name || (car?'MustangBoss302':'—');
+  if (m && m.color){ elCol.textContent='#'+m.color.getHexString();
+    elSw.style.background='#'+m.color.getHexString();
+    elMet.textContent=Number(m.metalness??0).toFixed(2);
+    elRo.textContent=Number(m.roughness??0).toFixed(2); }
+  elLi.textContent=`(${sun.position.x.toFixed(1)}, ${sun.position.y.toFixed(1)}, ${sun.position.z.toFixed(1)})`;
+}
+let downAt=0;
+renderer.domElement.addEventListener('pointerdown', ()=>downAt=performance.now());
+renderer.domElement.addEventListener('pointerup', e=>{
+  if (performance.now()-downAt>250) return;
+  pointer.set((e.clientX/innerWidth)*2-1, -(e.clientY/innerHeight)*2+1);
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObjects(scene.children,true).find(h=>!h.object.isHelper);
+  if (hit) setSelected(hit.object, hit.object.material);
+});
+renderer.domElement.addEventListener('dblclick', ()=>{
+  if(!car) return;
+  const c = new THREE.Box3().setFromObject(car).getCenter(new THREE.Vector3());
+  controls.target.copy(c); controls.update();
+});
+addEventListener('resize', ()=>{ camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+
+renderer.setAnimationLoop(()=>{
+  ring.rotation.z = performance.now()*0.001*0.25;
+  controls.update(); sunHelper.update();
+  renderer.render(scene, camera);
+});
+updatePbrPanel();
+</script>
+</body>
+</html>
