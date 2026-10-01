@@ -44,11 +44,6 @@
 
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
-        // เดิมไม่มี tone mapping และไม่มี gamma เลย พอค่าความสว่างเกิน 1.0 ก็โดนตัดเป็น
-        // ขาวสนิททันที ทำให้เห็นแต่สีขาว ไม่เห็นรายละเอียด
-        // ACES จะค่อย ๆ บีบส่วนสว่างให้เป็นโทนไล่ระดับ แทนที่จะหักด้วย
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0;
         renderer.shadowMap.enabled = true; // Shadow
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
@@ -66,34 +61,22 @@
         camera.lookAt(0, 0, 0);
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
 
-        // ค่าความสว่างทั้งหมดถูกลดลง เพราะเดิมไม่มี tone mapping ทำให้ผิวขาวล้นไปหมด
-        // วัดจากพิกเซลจริง: แสงรวมผนังหลังข้างในเคย E≈2.3 (ล้นที่ 1.0) ตอนนี้ตั้งให้เหลือราว 0.55
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.12);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
-        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x362907, 0.2);
+        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x362907, 0.6);
         scene.add(hemisphereLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.75);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
         directionalLight.position.set(5, 8, 5);
         directionalLight.castShadow = true;
-        // จำกัดกรอบเงาให้ตรงกับตัวบ้าน จะได้เงาคมชัด (เดิมใช้ค่าเริ่มต้นกว้าง 5 หน่วย)
-        directionalLight.shadow.camera.left = -2.6;
-        directionalLight.shadow.camera.right = 2.6;
-        directionalLight.shadow.camera.top = 3.4;
-        directionalLight.shadow.camera.bottom = -1.4;
-        directionalLight.shadow.camera.near = 4;
-        directionalLight.shadow.camera.far = 18;
-        directionalLight.shadow.mapSize.set(2048, 2048);
-        directionalLight.shadow.bias = -0.0006;
-        directionalLight.shadow.normalBias = 0.02;
         scene.add(directionalLight);
 
-        const pointLightFront = new THREE.PointLight(0xffffff, 0.3);
+        const pointLightFront = new THREE.PointLight(0xffffff, 0.8);
         pointLightFront.position.set(0, 2.5, 4);
         scene.add(pointLightFront);
 
-        const pointLightBack = new THREE.PointLight(0x88ccff, 0.2);
+        const pointLightBack = new THREE.PointLight(0x88ccff, 0.5);
         pointLightBack.position.set(0, 1.5, -4);
         scene.add(pointLightBack);
 
@@ -186,7 +169,6 @@
         const COLOR_GLASS = 0xBFE9F5;      // กระจกสีฟ้าอ่อน
 
         // จุดกึ่งกลางห้อง ใช้ตัดสินว่าผิวของสามเหลี่ยมหันเข้าหาห้องหรือหันออกนอก
-        // จุดกึ่งกลางห้อง ใช้เป็นจุดอ้างอิงตำแหน่งกล้องและไฟภายใน
         const ROOM_CENTER = new THREE.Vector3(0, 1.42, 0);
 
         // กรอบช่องกระจกในผนังข้าง โมเดลเดิมไม่ได้เจาะรู แต่มีกลุ่มสามเหลี่ยม 4 ใบ
@@ -235,11 +217,7 @@
 
         // ลงสีเปลือกบ้านสองด้าน + เจาะช่องกระจก
         // เปลือกบ้านเป็นผนังบาง ๆ ที่มีแต่ผิวด้านเดียว (material เดิมเป็น doubleSided)
-        // วิธีทำ "นอกชมพู / ในฟ้า" คือคัดลอกจุดของเปลือกออกมาอีกชุด
-        // แล้วสลับลำดับจุด + กลับเวกเตอร์ปกติ เวลานี้สามเหลี่ยมชุดที่สอง
-        // จะหันหน้าเข้าหาผู้ที่อยู่ข้างในบ้าน และรับแสงไฟจากข้างในได้ด้วย
-        // (สำคัญมาก: three.js คิดแสงจาก attribute normal ไม่ใช่จากทิศวงปิด
-        //  ถ้าใช้จุดชุดเดียวกัน ปกติจะยังชี้ออกนอก ไฟข้างในจะส่องผิวด้านในไม่ได้เลย)
+        // ถ้าจะให้ "นอกชมพู / ในฟ้า" ต้องคัดลอก index เป็นสองชุดแล้วใช้ FrontSide/BackSide แยกกัน
         // คืนจำนวนสามเหลี่ยมที่ถูกเจาะออก เพื่อเอาไปตรวจว่าตรงกับโมเดลไหม
         function paintHouseShell(mesh) {
             if (!mesh) return 0;
@@ -249,25 +227,27 @@
             if (!geometry.getIndex()) {
                 geometry.setIndex(Array.from({ length: position.count }, (_, i) => i));
             }
-            if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
-            const normal = geometry.getAttribute('normal');
-            const uv = geometry.getAttribute('uv');
             const idx = geometry.getIndex().array;
 
             // ค่าพิกัดข้างล่างทั้งหมดเป็นพิกัดโลก (world) แต่ vertex ในไฟล์ .glb เป็นพิกัด local
             // node ของบ้านมี translation/scale คนละชุด จึงต้องแปลงก่อนเทียบทุกครั้ง
             mesh.updateWorldMatrix(true, false);
             const toWorld = mesh.matrixWorld;
+            const toWorldNormal = new THREE.Matrix3().getNormalMatrix(toWorld);
 
             const a = new THREE.Vector3();
             const b = new THREE.Vector3();
             const c = new THREE.Vector3();
             const ab = new THREE.Vector3();
             const ac = new THREE.Vector3();
+            const n = new THREE.Vector3();
             const mid = new THREE.Vector3();
+            const toMid = new THREE.Vector3();
 
-            // เก็บสามเหลี่ยมที่ใช้จริง ตามลำดับจุดเดิม (ชุดนอก = ชมพู)
-            const kept = [];
+            const pinkFront = [];
+            const blueFront = [];
+            const pinkBack = [];
+            const blueBack = [];
             let cut = 0;
 
             for (let i = 0; i < idx.length; i += 3) {
@@ -287,72 +267,42 @@
 
                 ab.copy(b).sub(a);
                 ac.copy(c).sub(a);
-                // เส้นเป็ด (พื้นที่เป็นศูนย์) ไม่ต้องวาด
-                if (Math.abs(ab.x * ac.y - ab.y * ac.x) +
-                    Math.abs(ab.y * ac.z - ab.z * ac.y) +
-                    Math.abs(ab.z * ac.x - ab.x * ac.z) < 1e-12) continue;
+                n.copy(ab).cross(ac);
+                if (n.lengthSq() < 1e-12) continue; // เส้นเป็ด ไม่ต้องวาด
+                n.normalize().applyMatrix3(toWorldNormal).normalize();
 
-                kept.push(idx[i], idx[i + 1], idx[i + 2]);
+                // ส่วนที่ยื่นออกนอกระนาบผนัง (ชายคาที่ยื่น ปีกหลังคา) = ของนอกบ้านเสมอ
+                // นอกเหนือจากนั้น ผิวที่หันลง (เพดานเอียงใต้หลังคา, ใต้แผงเคาน์เตอร์) และผิวที่หันเข้าหา
+                // กลางห้อง คือผิวที่มองเห็นจากข้างใน ต้องเป็นสีฟ้า
+                const isOverhang = Math.abs(mid.x) > 1.001;
+                const seenFromInside = !isOverhang &&
+                    (n.y < -0.05 || n.dot(toMid.copy(mid).sub(ROOM_CENTER)) <= 0);
+
+                const front = seenFromInside ? blueFront : pinkFront;
+                const back = seenFromInside ? pinkBack : blueBack;
+                front.push(idx[i], idx[i + 1], idx[i + 2]);
+                back.push(idx[i], idx[i + 1], idx[i + 2]);
             }
 
-            // ต่อท้ายจุดชุดใหม่ (ปกติกลับด้าน) ต่อจากจุดเดิม
-            const vCount = position.count;
-            const nTri = kept.length / 3;
-            const totalV = vCount + nTri * 3;
-            const posOut = new Float32Array(totalV * 3);
-            const nrmOut = new Float32Array(totalV * 3);
-            const uvOut = uv ? new Float32Array(totalV * 2) : null;
-            posOut.set(position.array);
-            nrmOut.set(normal.array);
-            if (uvOut) uvOut.set(uv.array);
-
-            const outsideIdx = [];   // ชี้ไปที่จุดเดิม
-            const insideIdx = [];    // ชี้ไปที่จุดชุดใหม่ และสลับลำดับ
-            for (let t = 0; t < nTri; t++) {
-                const i0 = kept[t * 3], i1 = kept[t * 3 + 1], i2 = kept[t * 3 + 2];
-                outsideIdx.push(i0, i1, i2);
-                const d0 = vCount + t * 3;
-                for (let k = 0; k < 3; k++) {
-                    const src = kept[t * 3 + k];
-                    posOut[(d0 + k) * 3] = position.array[src * 3];
-                    posOut[(d0 + k) * 3 + 1] = position.array[src * 3 + 1];
-                    posOut[(d0 + k) * 3 + 2] = position.array[src * 3 + 2];
-                    nrmOut[(d0 + k) * 3] = -normal.array[src * 3];
-                    nrmOut[(d0 + k) * 3 + 1] = -normal.array[src * 3 + 1];
-                    nrmOut[(d0 + k) * 3 + 2] = -normal.array[src * 3 + 2];
-                    if (uvOut) {
-                        uvOut[(d0 + k) * 2] = uv.array[src * 2];
-                        uvOut[(d0 + k) * 2 + 1] = uv.array[src * 2 + 1];
-                    }
-                }
-                insideIdx.push(d0, d0 + 2, d0 + 1);   // สลับลำดับจุด = หันหน้าเข้าห้อง
-            }
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(posOut, 3));
-            geometry.setAttribute('normal', new THREE.BufferAttribute(nrmOut, 3));
-            if (uvOut) geometry.setAttribute('uv', new THREE.BufferAttribute(uvOut, 2));
-
-            const shell = (color) => new THREE.MeshStandardMaterial({
-                color: color, roughness: 0.5, metalness: 0, side: THREE.FrontSide
+            const shell = (color, side) => new THREE.MeshStandardMaterial({
+                color: color, roughness: 0.5, metalness: 0, side: side
             });
 
-            // เรียง index เป็น 2 กลุ่มติดกัน แล้วผูกวัสดุของแต่ละกลุ่ม
-            const nFront = outsideIdx.length;
-            geometry.setIndex(outsideIdx.concat(insideIdx));
+            // เรียง index เป็น 4 กลุ่มติดกัน เพื่อให้แต่ละกลุ่มได้วัสดุของตัวเอง
+            const nPink = pinkFront.length;
+            const nBlue = blueFront.length;
+            geometry.setIndex(pinkFront.concat(blueFront, pinkBack, blueBack));
             geometry.groups.length = 0;   // ล้างกลุ่มเดิมก่อน แล้วค่อยแบ่งใหม่
-            geometry.addGroup(0, nFront, 0);
-            geometry.addGroup(nFront, insideIdx.length, 1);
-            geometry.computeBoundingSphere();   // จุดเพิ่มขึ้น ต้องคำนวณขอบเขตใหม่
+            geometry.addGroup(0, nPink, 0);
+            geometry.addGroup(nPink, nBlue, 1);
+            geometry.addGroup(nPink + nBlue, nPink, 2);
+            geometry.addGroup(2 * nPink + nBlue, nBlue, 3);
             mesh.material = [
-                shell(COLOR_OUTSIDE),   // 0 ปกติชี้ออกนอก = มองเห็นจากข้างนอก
-                shell(COLOR_INSIDE)     // 1 ปกติชี้เข้าใน = มองเห็นจากข้างใน
+                shell(COLOR_OUTSIDE, THREE.FrontSide),  // 0 เห็นจากนอก
+                shell(COLOR_INSIDE, THREE.FrontSide),   // 1 เห็นจากใน (เพดาน/เคาน์เตอร์)
+                shell(COLOR_OUTSIDE, THREE.BackSide),   // 2 ด้านหลังของผนัง เผื่อมองจากนอก
+                shell(COLOR_INSIDE, THREE.BackSide)     // 3 ด้านในของผนัง เผื่อมองจากใน
             ];
-
-            // ให้เปลือกบ้านกาดเงาและรับเงา
-            // เดิมไม่กาดเงา แสงอาทิตย์จึงทะลุหลังคาเข้ามาเต็ม ๆ ผิวด้านในได้ E เพิ่มอีก 0.35
-            // ทำให้ห้องสว่างเกินจนซีด พอกาดเงาแล้วหลังคาจะบังแดดได้ตามจริง
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
             return cut;
         }
 
@@ -441,131 +391,48 @@
         });
 
 
-        // ---------- ป้าย NewT.glb ติดอยู่บนผนังหลัง (แทน Text.glb เดิม) ----------
-        // ใช้ rotation ดั้งเดิมในไฟล์ (baked +90° X = ท่าที่ author วางมา: ตั้งตรงหัน +Z)
-        // ผนังหลังอยู่ที่ z = -1.200 เลยยึด "หลังสุด" ของป้ายไว้ห่างผนัง 15 มม.
-        const TEXT_WIDTH = 1.4;      // ความกว้างป้าย (เมตร)
+        // ---------- ตัวอักษร 3 มิติ ติดอยู่บนผนังหลัง ----------
+        // ตัวอักษรหันหน้าเข้าหากล้องอยู่แล้ว (หน้า +Z) จึงไม่ต้องหมุนซ้ำ แค่เลื่อนให้ติดผนัง
+        // ผนังหลังอยู่ที่ z = -1.200 เลยยึด "หน้าสุด" ของป้ายไว้ห่างผนัง 15 มม.
+        // (ถ้ายึดกึ่งกลางแทน ป้ายที่หนา 19 มม. จะทะลุผนังไปครึ่งหนึ่ง)
+        const TEXT_WIDTH = 1.4;      // ความกว้างป้าย (เมตร) -> สูง 0.344 m
         const TEXT_CENTER_X = 0;     // กึ่งกลางแนวนอนบนผนัง
         const TEXT_CENTER_Y = 1.42;  // ระดับสายตา
-        const TEXT_WALL_Z = -1.185;  // หลังสุดของป้าย (ด้านติดผนัง)
+        const TEXT_WALL_Z = -1.185;  // หน้าสุดของป้าย
 
-        new THREE.GLTFLoader().load('./NewT.glb', (gltf) => {
+        new THREE.GLTFLoader().load('./Text.glb', (gltf) => {
             const textRoot = gltf.scene;
-            // ใช้ rotation ดั้งเดิมในไฟล์ (baked +90° X = ท่าตั้งตรงที่ author วางมา)
-            // ห้าม override เป็น -90° X และห้าม wrap.rotation.x = PI (ทั้งคู่ทำให้กลับหัว)
+            // ไฟล์ที่ export มาหันกลับหัวอยู่ หมุนกลับด้วยการห่อด้วยกลุ่มอีกชั้น
             const wrap = new THREE.Group();
             wrap.add(textRoot);
+            wrap.rotation.x = Math.PI;
             scene.add(wrap);
             wrap.updateMatrixWorld(true);
 
-            // วัดขนาดจริง แล้วค่อย scale ให้ได้ความกว้างตามที่ต้องการ
+            // วัดขนาดจริงหลังหมุนแล้ว แล้วค่อย scale ให้ได้ความกว้างตามที่ต้องการ
             const box = new THREE.Box3();
             const boxSize = new THREE.Vector3();
             wrap.scale.setScalar(TEXT_WIDTH / box.setFromObject(wrap).getSize(boxSize).x);
             wrap.updateMatrixWorld(true);
             box.setFromObject(wrap);
 
-            // เลื่อนให้กึ่งกลางแนวนอน/แนวตั้งตรงที่เลือกไว้ และให้หลังสุดชิดผนัง (หน้าลอยเข้าหาห้อง)
+            // เลื่อนให้กึ่งกลางแนวนอน/แนวตั้งตรงที่เลือกไว้ และให้หน้าสุดชิดผนัง
             const mid = box.getCenter(new THREE.Vector3());
             wrap.position.x += TEXT_CENTER_X - mid.x;
             wrap.position.y += TEXT_CENTER_Y - mid.y;
-            wrap.position.z += TEXT_WALL_Z - box.min.z;
+            wrap.position.z += TEXT_WALL_Z - box.max.z;
 
-            // NewT.glb มี material ทองติดมาแล้ว เก็บไว้ เติมเฉพาะ mesh ที่ไม่มี material
+            // ไฟล์นี้ไม่มี material ใส่สีเองให้เข้ากับห้อง
             textRoot.traverse((obj) => {
-                if (!obj.isMesh || obj.material) return;
+                if (!obj.isMesh) return;
                 obj.material = new THREE.MeshStandardMaterial({
                     color: 0xFFF4F6, roughness: 0.55, metalness: 0, side: THREE.DoubleSide
                 });
             });
 
-            console.log('โหลด NewT.glb สำเร็จ');
+            console.log('โหลด Text.glb สำเร็จ');
         }, undefined, (error) => {
-            console.error('โหลด NewT.glb ไม่สำเร็จ:', error);
-        });
-
-
-        // ---------- p.glb แขวนผนังหลัง เหนือป้าย NewT ----------
-        // ใช้ rotation ดั้งเดิมในไฟล์ ผนังหลังหันหน้า +Z อยู่แล้วจึงไม่ต้องหัน Y
-        // ป้ายกว้าง 1.4 สูง ~0.37 ขอบบน ~1.61 กลางผนังเป็นจั่วสูงเลยใส่ 0.45 ได้
-        // วางกลาง y=1.88 (ขอบล่าง ~1.655 ห่างป้าย ~4cm ขอบบน ~2.10 อยู่บนจั่ว)
-        const P_W = 0.45;   // ความกว้างรูป (เมตร)
-        const P_POS = { x: 0, y: 1.88, z: -1.18 };  // z = หลังสุดห่างผนังหลัง ~20 มม.
-
-        // รูปที่จะแปะบน p.glb (ไฟล์เดียวกับรูปในกรอบผนังข้าง)
-        const TEX_P_FILE = './825308342_1798623664624818_3759687659768814787_n.jpg';
-        const pPhotoMats = [];   // material ของ p ที่รอแปะรูป (กัน race โหลดไม่พร้อมกัน)
-        const texP = new THREE.TextureLoader().load(
-            TEX_P_FILE,
-            () => {
-                console.log('โหลดรูป p.glb สำเร็จ:', TEX_P_FILE,
-                    'ขนาดรูป=', texP.image ? texP.image.naturalWidth + 'x' + texP.image.naturalHeight : 'ไม่มี image');
-                // รูปพร้อมแล้วค่อยแปะเข้า material ที่สร้างไว้ แล้วบังคับอัปเดต
-                pPhotoMats.forEach((m) => { m.map = texP; m.needsUpdate = true; });
-            },
-            undefined,
-            (error) => console.error('โหลดรูป p.glb ไม่สำเร็จ:', TEX_P_FILE, error)
-        );
-        // กันรูป NPOT (500x631) อัปโหลดดำบน WebGL1: ไม่ใช้ mipmap + filter linear
-        texP.minFilter = THREE.LinearFilter;
-        texP.generateMipmaps = false;
-
-        new THREE.GLTFLoader().load('./p.glb', (gltf) => {
-            const pRoot = gltf.scene;
-            // ใช้ rotation ดั้งเดิมในไฟล์ (baked +90° X) ห้าม override
-            const pWrap = new THREE.Group();
-            pWrap.add(pRoot);
-            scene.add(pWrap);
-            pWrap.updateMatrixWorld(true);
-
-            const pBox = new THREE.Box3();
-            const pSize = new THREE.Vector3();
-            // ไม่หัน Y แล้ว ความกว้างอยู่แกน X
-            pWrap.scale.setScalar(P_W / pBox.setFromObject(pWrap).getSize(pSize).x);
-            pWrap.updateMatrixWorld(true);
-            pBox.setFromObject(pWrap);
-
-            // หลังสุด (min.z) ชิดผนังหลัง กึ่งกลาง x/y ตามที่เลือก
-            const pMid = pBox.getCenter(new THREE.Vector3());
-            pWrap.position.x += P_POS.x - pMid.x;
-            pWrap.position.y += P_POS.y - pMid.y;
-            pWrap.position.z += P_POS.z - pBox.min.z;
-
-            // ไฟล์นี้ไม่มี material ใส่ material รูปแบบไม่รับแสง (เห็นสีจริง ไม่ขึ้นกับไฟห้อง)
-            // แปะ map ถ้ารูปพร้อมแล้ว ถ้ารูปยังโหลดไม่เสร็จ onLoad ข้างบนจะมาแปะให้เอง
-            pRoot.traverse((obj) => {
-                if (!obj.isMesh || obj.material) return;
-                const pm = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-                if (texP.image) { pm.map = texP; pm.needsUpdate = true; }
-                obj.material = pm;
-                pPhotoMats.push(pm);
-            });
-
-            console.log('โหลด p.glb สำเร็จ');
-        }, undefined, (error) => {
-            console.error('โหลด p.glb ไม่สำเร็จ:', error);
-        });
-
-
-        // ---------- Paiy.glb ข้างบ้านด้านซ้าย (นอกบ้าน) ----------
-        // ไฟล์วางตำแหน่งมาเองแล้ว (x≈-2, z≈1.66 หน้าบ้านเยื้องซ้าย) มี 2 node
-        // (Plane.001 + Text.001) บิด +90° X ทั้งคู่ แค่แก้ rotation ไม่จัดตำแหน่งใหม่
-        new THREE.GLTFLoader().load('./Paiy.glb', (gltf) => {
-            const paiy = gltf.scene;
-            // ใช้ rotation + ตำแหน่งดั้งเดิมในไฟล์ (author วางข้างบ้านมาแล้ว) ห้าม override
-            scene.add(paiy);
-
-            // Text.001 มี material ทองติดมาแล้ว เก็บไว้ เติมเฉพาะ mesh ที่ไม่มี (Plane.001)
-            paiy.traverse((obj) => {
-                if (!obj.isMesh || obj.material) return;
-                obj.material = new THREE.MeshStandardMaterial({
-                    color: 0xFFF4F6, roughness: 0.6, metalness: 0, side: THREE.DoubleSide
-                });
-            });
-
-            console.log('โหลด Paiy.glb สำเร็จ');
-        }, undefined, (error) => {
-            console.error('โหลด Paiy.glb ไม่สำเร็จ:', error);
+            console.error('โหลด Text.glb ไม่สำเร็จ:', error);
         });
 
 
@@ -584,9 +451,6 @@
             undefined,
             (error) => console.error('โหลดรูปภาพไม่สำเร็จ:', PHOTO_FILE, error)
         );
-        // กันรูป NPOT อัปโหลดดำ (แบบเดียวกับ texP)
-        texPhoto.minFilter = THREE.LinearFilter;
-        texPhoto.generateMipmaps = false;
 
         // โครงรูป วางถอยเข้าไปในผนัง 3 มม. กันภาพทับซ้อนกระพริบ
         const photoFrame = new THREE.Mesh(
@@ -601,20 +465,11 @@
 
         const photo = new THREE.Mesh(
             new THREE.PlaneGeometry(PHOTO_W, PHOTO_H),
-            // รูปโชว์ใช้แบบไม่รับแสง (สีจริง ไม่ขึ้นกับไฟห้อง)
-            new THREE.MeshBasicMaterial({ map: texPhoto, side: THREE.DoubleSide })
+            new THREE.MeshStandardMaterial({ map: texPhoto, roughness: 0.9, metalness: 0 })
         );
         photo.position.copy(PHOTO_POS);
         photo.rotation.y = -Math.PI / 2;
         scene.add(photo);
-
-        // ---------- debug ชั่วคราว: ตรวจว่ารูป decode ได้จริงไหม ----------
-        console.log('BUILD 005, WebGL2=', renderer.capabilities.isWebGL2);
-        window.__dbg = { texP, texPhoto, pPhotoMats };
-        setTimeout(() => {
-            console.log('DBG texP:', texP.image ? (texP.image.naturalWidth + 'x' + texP.image.naturalHeight) : 'NO IMAGE',
-                '| texPhoto:', texPhoto.image ? (texPhoto.image.naturalWidth + 'x' + texPhoto.image.naturalHeight) : 'NO IMAGE');
-        }, 3000);
 
 
         // ---------- ระบบเดินกล้องเข้า-ออกบ้าน ----------
@@ -622,10 +477,10 @@
         // จุดอ้างอิงภายนอก/ภายในบ้าน (วัดจากตำแหน่งจริงใน HOME.glb)
         // จุดข้างในบ้านเล็งไปที่กลางห้องเพื่อให้เห็นทั้งตัวอักษรที่พื้น รูปบนผนังขวา และกระจกสองข้าง
         const PATH_IN = [
-            { pos: new THREE.Vector3(0, 1.1, 2.0), target: new THREE.Vector3(0, 1.1, 1.0), light: 0.8 },
+            { pos: new THREE.Vector3(0, 1.1, 2.0), target: new THREE.Vector3(0, 1.1, 1.0), light: 2.6 },
             // ข้างในบ้านมองราบที่ผนังหลัง (เดิมก้มดูพื้น 13.2 องศาเพื่อเก็บป้ายที่ยืนพื้น
             // แต่ตอนนี้ป้ายอยู่บนผนังแล้ว ถ้ายังก้มอยู่ครึ่งล่างของภาพจะเป็นพื้นเปล่า)
-            { pos: new THREE.Vector3(0, 1.3, 0.8), target: new THREE.Vector3(0, 1.3, -1.2), light: 0.8 }
+            { pos: new THREE.Vector3(0, 1.3, 0.8), target: new THREE.Vector3(0, 1.3, -1.2), light: 2.6 }
         ];
         const PATH_OUT = [
             // ถอยกลางห้องแล้วหันหน้าเข้าหาประตูก่อน เผื่อผู้ใช้หันกล้องไว้คนละทิศตอนกดออก
@@ -642,12 +497,9 @@
         let pointerDownPos = null;
 
         // ไฟอุ่นข้างในบ้าน (ไม่กาดเงา จึงเปิด-ปิดพร้อมการเดินทางเพื่อไม่ให้แสงรั่วออกมานอกบ้าน)
-        // ย้ายลงมาที่ระดับหัวโคม (1.62) ไม่ใช่ใกล้เพดาน เพราะที่ 1.95 ไฟอยู่ห่างเพดาน
-        // หลังคาแค่ 0.87 ม. แสงจะตกลงเพดานหนักจนขาวล้น (วัดแล้ว E≈3.4 ตอน intensity 2.6)
-        // สีไฟต้องเป็นโทนเย็น ไม่ใช่สีส้มอุ่น เพราะไฟสีส้มจะไปหักสีฟ้าของผนังจนกลายเป็นสีเทา
-        // (วัดจากพิกเซลจริง: ไฟส้มได้ผนัง B-R=24 แต่ไฟฟ้าอ่อนได้ B-R=39 ที่ความสว่างเท่ากัน)
-        const pointLightInside = new THREE.PointLight(0xd8ecff, 0, 4.5, 2);
-        pointLightInside.position.set(0, 1.55, 0);
+        // ตำแหน่งและระยะตัดไว้ให้ตัวอักษรที่พื้นกับรูปบนผนังขวาได้รับแสงใกล้เคียงกัน
+        const pointLightInside = new THREE.PointLight(0xffd9a0, 0, 4.5, 2);
+        pointLightInside.position.set(0, 1.95, 0);
         scene.add(pointLightInside);
 
         const camAnim = {
@@ -819,6 +671,29 @@
         });
 
     </script>
+
+<script>
+(function () {
+  var tries = 0;
+  var iv = setInterval(function () {
+    tries++;
+    if (typeof doorMesh === 'undefined' || !doorMesh) { if (tries > 300) clearInterval(iv); return; }
+    clearInterval(iv);
+    // รอให้ไฟ/ฉากนิ่งสักครู่ แล้วตั้งเป็นมุมมองที่กล้องหยุดนิ่งข้างในบ้านพอดี
+    setTimeout(function () {
+      try {
+        isInside = true;
+        applyInsideLimits(true);
+        pointLightInside.intensity = 2.6;
+        camera.position.set(0, 1.3, 0.8);
+        controls.target.set(0, 1.3, -1.2);
+        controls.update();
+        document.title = 'INSIDE-READY';
+      } catch (e) { document.title = 'ERR ' + e.message; }
+    }, 2500);
+  }, 100);
+})();
+</script>
 </body>
 
 </html>
