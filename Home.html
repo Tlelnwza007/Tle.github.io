@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -44,7 +44,7 @@
 
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
-   
+
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.0;
         renderer.shadowMap.enabled = true; // Shadow
@@ -74,7 +74,7 @@
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.75);
         directionalLight.position.set(5, 8, 5);
         directionalLight.castShadow = true;
-       
+
         directionalLight.shadow.camera.left = -8;
         directionalLight.shadow.camera.right = 8;
         directionalLight.shadow.camera.top = 10;
@@ -106,8 +106,8 @@
 
 
 
-             scene.background = new THREE.Color(0xcfe8f5);
-             scene.fog = new THREE.Fog(0xcfe8f5, 18, 45);
+        scene.background = new THREE.Color(0xcfe8f5);
+        scene.fog = new THREE.Fog(0xcfe8f5, 18, 45);
 
         //skybox
         //  const loader = new THREE.CubeTextureLoader();
@@ -122,22 +122,22 @@
         //  scene.environment = skybox;
 
         // Panoramic 360-degree EXR skybox
-    //    const exrSkyboxUrl = 'https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/venice_sunset_1k.exr';
-    //    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    //    pmremGenerator.compileEquirectangularShader();
+        //    const exrSkyboxUrl = 'https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/1k/venice_sunset_1k.exr';
+        //    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        //    pmremGenerator.compileEquirectangularShader();
 
-    //    new THREE.EXRLoader()
-    //        .setDataType(THREE.UnsignedByteType)
-    //        .load(exrSkyboxUrl, (texture) => {
-    //            const skybox = pmremGenerator.fromEquirectangular(texture).texture;
-    //            scene.background = skybox;
-    //            scene.environment = skybox;
+        //    new THREE.EXRLoader()
+        //        .setDataType(THREE.UnsignedByteType)
+        //        .load(exrSkyboxUrl, (texture) => {
+        //            const skybox = pmremGenerator.fromEquirectangular(texture).texture;
+        //            scene.background = skybox;
+        //            scene.environment = skybox;
 
-    //            texture.dispose();
-    //            pmremGenerator.dispose();
-    //        }, undefined, (error) => {
-    //            console.error('Unable to load EXR skybox:', error);
-    //        });
+        //            texture.dispose();
+        //            pmremGenerator.dispose();
+        //        }, undefined, (error) => {
+        //            console.error('Unable to load EXR skybox:', error);
+        //        });
 
 
 
@@ -179,7 +179,7 @@
             scene.add(garden);
             const addShadow = (m) => { m.castShadow = true; m.receiveShadow = true; return m; };
 
-     
+
             const skyGeo = new THREE.SphereGeometry(80, 16, 12);
             const skyMat = new THREE.ShaderMaterial({
                 side: THREE.BackSide, depthWrite: false, fog: false,
@@ -193,7 +193,7 @@
             });
             garden.add(new THREE.Mesh(skyGeo, skyMat));
 
-     
+
             const grass = new THREE.Mesh(
                 new THREE.PlaneGeometry(60, 60),
                 new THREE.MeshStandardMaterial({ color: 0x7fa36b, roughness: 1, metalness: 0 })
@@ -208,7 +208,7 @@
             gravel.rotation.x = -Math.PI / 2; gravel.position.y = -0.01; gravel.receiveShadow = true;
             garden.add(gravel);
 
-   
+
             const stepMat = new THREE.MeshStandardMaterial({ color: 0xb8b5ae, roughness: 0.95, metalness: 0 });
             const steps = [
                 [0, 1.5, 0.36], [0.16, 2.1, 0.33], [-0.14, 2.7, 0.36],
@@ -234,7 +234,7 @@
                 rock.scale.y = 0.65; garden.add(rock);
             });
 
-     
+
             function makePine(scale) {
                 const g = new THREE.Group();
                 const trunk = addShadow(new THREE.Mesh(
@@ -253,15 +253,15 @@
                 const pine = makePine(s); pine.position.set(x, 0, z); pine.rotation.y = x; garden.add(pine);
             });
 
-     
+
             const mossMat = new THREE.MeshStandardMaterial({ color: 0x5a7d4f, roughness: 1 });
             [[-1.7, 0.9, 0.3], [1.7, 0.7, 0.34], [-1.7, -0.9, 0.26], [1.75, -0.9, 0.3],
-             [-1.4, 3.4, 0.24], [1.5, 3.5, 0.26]].forEach(([x, z, r]) => {
+            [-1.4, 3.4, 0.24], [1.5, 3.5, 0.26]].forEach(([x, z, r]) => {
                 const b = addShadow(new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10), mossMat));
                 b.position.set(x, r * 0.8, z); b.scale.y = 0.8; garden.add(b);
             });
 
-    
+
             function makeStoneLantern() {
                 const g = new THREE.Group();
                 const stone = new THREE.MeshStandardMaterial({ color: 0xcac5bb, roughness: 0.9 });
@@ -286,7 +286,7 @@
                 const l = makeStoneLantern(); l.position.set(x, 0, z); garden.add(l);
             });
 
-      
+
             const bambooMat = new THREE.MeshStandardMaterial({ color: 0xc2a878, roughness: 0.9 });
             function fenceRun(x0, z0, x1, z1) {
                 const len = Math.hypot(x1 - x0, z1 - z0);
@@ -305,7 +305,7 @@
             }
             fenceRun(-4, -4, 4, -4); fenceRun(-4, -4, -4, 4); fenceRun(4, -4, 4, 4);
 
-          
+
             const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
             const clouds = [];
             [[-8, 12, -14], [6, 14, -18], [0, 11, 14]].forEach(([x, y, z]) => {
@@ -328,23 +328,23 @@
 
 
 
-        const COLOR_OUTSIDE = 0xF2A2B8;   
-        const COLOR_INSIDE = 0x8FC1E3;     
-        const COLOR_TRIM = 0xF5EFE2;       
-        const COLOR_FURNITURE = 0xD9D9D9;  
-        const COLOR_GLASS = 0xBFE9F5;     
+        const COLOR_OUTSIDE = 0xF2A2B8;
+        const COLOR_INSIDE = 0x8FC1E3;
+        const COLOR_TRIM = 0xF5EFE2;
+        const COLOR_FURNITURE = 0xD9D9D9;
+        const COLOR_GLASS = 0xBFE9F5;
 
-     
+
         const ROOM_CENTER = new THREE.Vector3(0, 1.42, 0);
 
-  
+
         const WINDOW_HOLE = { y0: 0.613, y1: 1.435, z0: -0.099, z1: 0.091 };
         const WINDOW_OUTLINE = [
             [1.435, -0.004], [1.340, 0.091], [0.708, 0.091],
             [0.613, -0.004], [0.708, -0.099], [1.340, -0.099]
         ];
 
-  
+
         function flatShape(points, x) {
             const pos = [];
             for (let i = 1; i < points.length - 1; i++) {
@@ -359,7 +359,7 @@
         }
 
 
-      
+
         function flatRing(points, x, scale) {
             let cy = 0, cz = 0;
             for (const p of points) { cy += p[0]; cz += p[1]; }
@@ -380,7 +380,7 @@
             return g;
         }
 
-    
+
         function paintHouseShell(mesh) {
             if (!mesh) return 0;
             const geometry = mesh.geometry;
@@ -394,7 +394,7 @@
             const uv = geometry.getAttribute('uv');
             const idx = geometry.getIndex().array;
 
-        
+
             mesh.updateWorldMatrix(true, false);
             const toWorld = mesh.matrixWorld;
 
@@ -405,7 +405,7 @@
             const ac = new THREE.Vector3();
             const mid = new THREE.Vector3();
 
-        
+
             const kept = [];
             let cut = 0;
 
@@ -425,7 +425,7 @@
 
                 ab.copy(b).sub(a);
                 ac.copy(c).sub(a);
-  
+
                 if (Math.abs(ab.x * ac.y - ab.y * ac.x) +
                     Math.abs(ab.y * ac.z - ab.z * ac.y) +
                     Math.abs(ab.z * ac.x - ab.x * ac.z) < 1e-12) continue;
@@ -444,8 +444,8 @@
             nrmOut.set(normal.array);
             if (uvOut) uvOut.set(uv.array);
 
-            const outsideIdx = [];   
-            const insideIdx = [];    
+            const outsideIdx = [];
+            const insideIdx = [];
             for (let t = 0; t < nTri; t++) {
                 const i0 = kept[t * 3], i1 = kept[t * 3 + 1], i2 = kept[t * 3 + 2];
                 outsideIdx.push(i0, i1, i2);
@@ -463,7 +463,7 @@
                         uvOut[(d0 + k) * 2 + 1] = uv.array[src * 2 + 1];
                     }
                 }
-                insideIdx.push(d0, d0 + 2, d0 + 1);  
+                insideIdx.push(d0, d0 + 2, d0 + 1);
             }
 
             geometry.setAttribute('position', new THREE.BufferAttribute(posOut, 3));
@@ -474,25 +474,25 @@
                 color: color, roughness: 0.5, metalness: 0, side: THREE.FrontSide
             });
 
-         
+
             const nFront = outsideIdx.length;
             geometry.setIndex(outsideIdx.concat(insideIdx));
-            geometry.groups.length = 0;  
+            geometry.groups.length = 0;
             geometry.addGroup(0, nFront, 0);
             geometry.addGroup(nFront, insideIdx.length, 1);
-            geometry.computeBoundingSphere(); 
+            geometry.computeBoundingSphere();
             mesh.material = [
-                shell(COLOR_OUTSIDE), 
-                shell(COLOR_INSIDE)     
+                shell(COLOR_OUTSIDE),
+                shell(COLOR_INSIDE)
             ];
 
-          
+
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             return cut;
         }
 
-      
+
         function buildWindows() {
             const glass = new THREE.MeshPhysicalMaterial({
                 color: COLOR_GLASS,
@@ -513,7 +513,7 @@
             });
         }
 
-   
+
         let homeModel = null;
         let doorMesh = null;
         const loader = new THREE.GLTFLoader();
@@ -521,7 +521,7 @@
             homeModel = gltf.scene;
             scene.add(homeModel);
 
-         
+
             const bbox = new THREE.Box3();
             const size = new THREE.Vector3();
             const center = new THREE.Vector3();
@@ -537,7 +537,7 @@
                 }
             });
 
-     
+
             let shellMesh = null;
             let mostTriangles = -1;
             homeModel.traverse((obj) => {
@@ -552,7 +552,7 @@
 
             const cut = paintHouseShell(shellMesh);
 
-         
+
             homeModel.traverse((obj) => {
                 if (!obj.isMesh || obj === shellMesh) return;
                 obj.material = new THREE.MeshStandardMaterial({
@@ -563,7 +563,7 @@
                 });
             });
 
-          
+
             if (cut === 8) {
                 buildWindows();
             } else {
@@ -576,34 +576,34 @@
         });
 
 
-      
-        const TEXT_WIDTH = 1.4;      
-        const TEXT_CENTER_X = 0;    
-        const TEXT_CENTER_Y = 1.42;  
-        const TEXT_WALL_Z = -1.185; 
+
+        const TEXT_WIDTH = 1.4;
+        const TEXT_CENTER_X = 0;
+        const TEXT_CENTER_Y = 1.42;
+        const TEXT_WALL_Z = -1.185;
 
         new THREE.GLTFLoader().load('./NewT.glb', (gltf) => {
             const textRoot = gltf.scene;
-          
+
             const wrap = new THREE.Group();
             wrap.add(textRoot);
             scene.add(wrap);
             wrap.updateMatrixWorld(true);
 
-          
+
             const box = new THREE.Box3();
             const boxSize = new THREE.Vector3();
             wrap.scale.setScalar(TEXT_WIDTH / box.setFromObject(wrap).getSize(boxSize).x);
             wrap.updateMatrixWorld(true);
             box.setFromObject(wrap);
 
-         
+
             const mid = box.getCenter(new THREE.Vector3());
             wrap.position.x += TEXT_CENTER_X - mid.x;
             wrap.position.y += TEXT_CENTER_Y - mid.y;
             wrap.position.z += TEXT_WALL_Z - box.min.z;
 
-         
+
             textRoot.traverse((obj) => {
                 if (!obj.isMesh || obj.material) return;
                 obj.material = new THREE.MeshStandardMaterial({
@@ -617,31 +617,31 @@
         });
 
 
-     
-        const P_W = 0.45;   
-        const P_POS = { x: 0, y: 1.88, z: -1.18 }; 
 
-      
+        const P_W = 0.45;
+        const P_POS = { x: 0, y: 1.88, z: -1.18 };
+
+
         const TEX_P_FILE = './825308342_1798623664624818_3759687659768814787_n.jpg';
-        const pPhotoMats = [];   
+        const pPhotoMats = [];
         const texP = new THREE.TextureLoader().load(
             TEX_P_FILE,
             () => {
                 console.log('โหลดรูป p.glb สำเร็จ:', TEX_P_FILE,
                     'ขนาดรูป=', texP.image ? texP.image.naturalWidth + 'x' + texP.image.naturalHeight : 'ไม่มี image');
-             
+
                 pPhotoMats.forEach((m) => { m.map = texP; m.needsUpdate = true; });
             },
             undefined,
             (error) => console.error('โหลดรูป p.glb ไม่สำเร็จ:', TEX_P_FILE, error)
         );
-   
+
         texP.minFilter = THREE.LinearFilter;
         texP.generateMipmaps = false;
 
         new THREE.GLTFLoader().load('./p.glb', (gltf) => {
             const pRoot = gltf.scene;
- 
+
             const pWrap = new THREE.Group();
             pWrap.add(pRoot);
             scene.add(pWrap);
@@ -649,18 +649,18 @@
 
             const pBox = new THREE.Box3();
             const pSize = new THREE.Vector3();
-        
+
             pWrap.scale.setScalar(P_W / pBox.setFromObject(pWrap).getSize(pSize).x);
             pWrap.updateMatrixWorld(true);
             pBox.setFromObject(pWrap);
 
-           
+
             const pMid = pBox.getCenter(new THREE.Vector3());
             pWrap.position.x += P_POS.x - pMid.x;
             pWrap.position.y += P_POS.y - pMid.y;
             pWrap.position.z += P_POS.z - pBox.min.z;
 
-        
+
             pRoot.traverse((obj) => {
                 if (!obj.isMesh || obj.material) return;
                 const pm = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
@@ -675,10 +675,12 @@
         });
 
 
-    
+
+        let paiyRoot = null;
         new THREE.GLTFLoader().load('./Paiy.glb', (gltf) => {
-            const paiy = gltf.scene;
-     
+            paiyRoot = gltf.scene;
+            const paiy = paiyRoot;
+
             scene.add(paiy);
 
 
@@ -695,24 +697,24 @@
         });
 
 
- 
+
         const PHOTO_FILE = './825308342_1798623664624818_3759687659768814787_n.jpg';
-        const PHOTO_W = 0.4;    
+        const PHOTO_W = 0.4;
         const PHOTO_H = 0.505;
         const PHOTO_POS = new THREE.Vector3(0.995, 1.6, -0.75);
 
-   
+
         const texPhoto = new THREE.TextureLoader().load(
             PHOTO_FILE,
             () => console.log('โหลดรูปภาพสำเร็จ:', PHOTO_FILE),
             undefined,
             (error) => console.error('โหลดรูปภาพไม่สำเร็จ:', PHOTO_FILE, error)
         );
-      
+
         texPhoto.minFilter = THREE.LinearFilter;
         texPhoto.generateMipmaps = false;
 
-      
+
         const photoFrame = new THREE.Mesh(
             new THREE.PlaneGeometry(PHOTO_W + 0.04, PHOTO_H + 0.04),
             new THREE.MeshStandardMaterial({
@@ -725,21 +727,21 @@
 
         const photo = new THREE.Mesh(
             new THREE.PlaneGeometry(PHOTO_W, PHOTO_H),
-           
+
             new THREE.MeshBasicMaterial({ map: texPhoto, side: THREE.DoubleSide })
         );
         photo.position.copy(PHOTO_POS);
         photo.rotation.y = -Math.PI / 2;
         scene.add(photo);
 
-      
+
         (function buildJapaneseInterior() {
             const inner = new THREE.Group();
             inner.name = 'JapaneseInterior';
             scene.add(inner);
             const solid = (m) => { m.castShadow = true; m.receiveShadow = true; return m; };
 
-          
+
             const strawMat = new THREE.MeshStandardMaterial({ color: 0xd9c9a3, roughness: 1, metalness: 0 });
             const edgeMat = new THREE.MeshStandardMaterial({ color: 0x3a5a40, roughness: 1, metalness: 0 });
             function makeTatami() {
@@ -760,7 +762,7 @@
                 const t = makeTatami(); t.position.set(x, 0.006, -0.15); inner.add(t);
             });
 
-        
+
             const woodMat = new THREE.MeshStandardMaterial({ color: 0x8b5e3c, roughness: 0.7, metalness: 0 });
             const table = new THREE.Group();
             const top = solid(new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.05, 0.5), woodMat));
@@ -780,7 +782,7 @@
             table.position.set(0, 0, -0.15);
             inner.add(table);
 
-        
+
             const cu1 = solid(new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.07, 0.42),
                 new THREE.MeshStandardMaterial({ color: 0x3e5a7a, roughness: 1 })));
             cu1.position.set(-0.65, 0.045, -0.15); cu1.rotation.y = 0.05; inner.add(cu1);
@@ -788,7 +790,7 @@
                 new THREE.MeshStandardMaterial({ color: 0xd9c9a3, roughness: 1 })));
             cu2.position.set(0.65, 0.045, -0.15); cu2.rotation.y = -0.06; inner.add(cu2);
 
-          
+
             const shelf = new THREE.Group();
             const shelfMat = new THREE.MeshStandardMaterial({ color: 0x6e4527, roughness: 0.8, metalness: 0 });
             [[0.035], [0.19], [0.345]].forEach(([y]) => {
@@ -814,7 +816,7 @@
             shelf.position.set(-0.65, 0, -1.0);
             inner.add(shelf);
 
-          
+
             const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.33, 6),
                 new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.8 }));
             cord.position.set(0, 1.845, 0); inner.add(cord);
@@ -829,7 +831,7 @@
             cap.position.set(0, 1.69, 0); inner.add(cap);
         })();
 
-      
+
         console.log('BUILD 005, WebGL2=', renderer.capabilities.isWebGL2);
         window.__dbg = { texP, texPhoto, pPhotoMats };
         setTimeout(() => {
@@ -847,7 +849,7 @@
             { pos: new THREE.Vector3(0, 1.3, 0.8), target: new THREE.Vector3(0, 1.3, -1.2), light: 0.8 }
         ];
         const PATH_OUT = [
-        
+
             { pos: new THREE.Vector3(0, 1.3, 0.6), target: new THREE.Vector3(0, 1.2, 1.0), light: 0 },
             { pos: new THREE.Vector3(0, 1.1, 2.0), target: new THREE.Vector3(0, 1.1, 1.0), light: 0 },
             { pos: new THREE.Vector3(0, 2, 5), target: new THREE.Vector3(0, 0, 0), light: 0 }
@@ -860,7 +862,7 @@
         let isInside = false;
         let pointerDownPos = null;
 
-      
+
         const pointLightInside = new THREE.PointLight(0xd8ecff, 0, 4.5, 2);
         pointLightInside.position.set(0, 1.55, 0);
         scene.add(pointLightInside);
@@ -881,10 +883,10 @@
 
         const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-    
+
         const INSIDE_RADIUS = 2.0;
         const INSIDE_AZIMUTH = 0.454;
-        const INSIDE_POLAR = 0.22;     
+        const INSIDE_POLAR = 0.22;
 
         function applyInsideLimits(inside) {
             if (inside) {
@@ -940,12 +942,12 @@
             isInside = false;
             btnExit.style.display = 'none';
             renderer.domElement.style.cursor = 'default';
-          
+
             applyInsideLimits(false);
             flyTo(PATH_OUT);
         }
 
-      
+
         function isDoorHit(event) {
             if (!doorMesh || !homeModel) return false;
             const rect = renderer.domElement.getBoundingClientRect();
@@ -957,6 +959,17 @@
             return hits.length > 0 && hits[0].object === doorMesh;
         }
 
+        function isPaiyHit(event) {
+            if (!paiyRoot) return false;
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            paiyRoot.updateMatrixWorld(true);
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObject(paiyRoot, true);
+            return hits.length > 0;
+        }
+
         renderer.domElement.addEventListener('pointerdown', (event) => {
             pointerDownPos = { x: event.clientX, y: event.clientY };
         });
@@ -965,14 +978,18 @@
             if (!pointerDownPos) return;
             const moved = Math.hypot(event.clientX - pointerDownPos.x, event.clientY - pointerDownPos.y);
             pointerDownPos = null;
-            if (moved > 5) return; 
+            if (moved > 5) return;
             if (isInside) return;
+            if (isPaiyHit(event)) {
+                window.location.href = './index.html';
+                return;
+            }
             if (isDoorHit(event)) enterHouse();
         });
 
         renderer.domElement.addEventListener('pointermove', (event) => {
             if (camAnim.active) return;
-            renderer.domElement.style.cursor = !isInside && isDoorHit(event) ? 'pointer' : 'default';
+            renderer.domElement.style.cursor = !isInside && (isDoorHit(event) || isPaiyHit(event)) ? 'pointer' : 'default';
         });
 
         btnExit.addEventListener('click', goOutside);
@@ -981,7 +998,7 @@
         let lastTime = performance.now();
 
         function animate(t) {
-      
+
             const now = t || performance.now();
             const delta = Math.min(now - lastTime, 100);
             lastTime = now;
@@ -999,7 +1016,7 @@
                     camAnim.leg++;
                     if (camAnim.leg >= camAnim.path.length) {
                         camAnim.active = false;
-                       
+
                         controls.enabled = true;
                         applyInsideLimits(isInside);
                     } else {
@@ -1012,7 +1029,7 @@
                 }
             }
 
-         
+
             if (!camAnim.active) controls.update();
             renderer.render(scene, camera);
             requestAnimationFrame(animate);
