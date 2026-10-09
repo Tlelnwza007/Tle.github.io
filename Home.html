@@ -287,6 +287,83 @@
             });
 
 
+            // ---------- ของโชว์ Vertex / Fragment Shader ขนาบทางเดิน (อย่างละ 1 อัน) ----------
+            // วางที่ x=±1.2, z=1.5 เว้นแกนกลาง x∈[-0.6,0.6] ไว้ให้กล้อง PATH_IN/OUT เดิน
+            const shaderTime = { value: 0 };
+            const shaderSpinners = [];
+            function makeLabelSprite(text, bg) {
+                const cv = document.createElement('canvas');
+                cv.width = 512; cv.height = 128;
+                const ctx = cv.getContext('2d');
+                ctx.fillStyle = bg; ctx.fillRect(0, 0, 512, 128);
+                ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 6;
+                ctx.strokeRect(8, 8, 496, 112);
+                ctx.fillStyle = '#ffffff'; ctx.font = 'bold 52px sans-serif';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(text, 256, 66);
+                const tex = new THREE.CanvasTexture(cv);
+                tex.minFilter = THREE.LinearFilter; tex.generateMipmaps = false;
+                const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true }));
+                sp.scale.set(0.72, 0.18, 1);
+                return sp;
+            }
+            function makePedestal() {
+                const g = new THREE.Group();
+                const stone = new THREE.MeshStandardMaterial({ color: 0xcac5bb, roughness: 0.9 });
+                const body = addShadow(new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 0.5, 8), stone));
+                body.position.y = 0.25; g.add(body);
+                const plate = addShadow(new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 0.52), stone));
+                plate.position.y = 0.535; g.add(plate);
+                return g;
+            }
+            // ซ้าย: Vertex Shader = icosahedron wireframe ขยับจุดใน vertexShader
+            const vertexMat = new THREE.ShaderMaterial({
+                wireframe: true,
+                uniforms: { uTime: shaderTime },
+                vertexShader: 'uniform float uTime; varying float vWave;' +
+                    'void main(){' +
+                    ' float w = sin(position.y*8.0 + uTime*2.2)*0.08 + sin(position.x*6.0 + uTime*1.6)*0.05;' +
+                    ' vWave = w;' +
+                    ' vec3 p = position + normal * w;' +
+                    ' gl_Position = projectionMatrix*modelViewMatrix*vec4(p,1.0); }',
+                fragmentShader: 'varying float vWave;' +
+                    'void main(){' +
+                    ' vec3 a = vec3(0.1,0.5,1.0); vec3 b = vec3(0.4,1.0,1.0);' +
+                    ' gl_FragColor = vec4(mix(a,b,smoothstep(-0.12,0.12,vWave)),1.0); }'
+            });
+            const vertexExhibit = new THREE.Group();
+            vertexExhibit.add(makePedestal());
+            const vertexBall = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1), vertexMat);
+            vertexBall.position.y = 0.95; vertexExhibit.add(vertexBall);
+            shaderSpinners.push(vertexBall);
+            const vertexLabel = makeLabelSprite('Vertex Shader', 'rgba(30,90,180,0.85)');
+            vertexLabel.position.y = 1.38; vertexExhibit.add(vertexLabel);
+            vertexExhibit.position.set(-1.5, 0, 1.5);
+            garden.add(vertexExhibit);
+
+            // ขวา: Fragment Shader = ทรงกลมทึบ ไล่สีแอนิเมชันใน fragmentShader (ไม่ขยับจุด)
+            const fragmentMat = new THREE.ShaderMaterial({
+                uniforms: { uTime: shaderTime },
+                vertexShader: 'varying vec2 vUv;' +
+                    'void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+                fragmentShader: 'uniform float uTime; varying vec2 vUv;' +
+                    'void main(){' +
+                    ' vec3 col = 0.5 + 0.5*cos(uTime*1.5 + vUv.xyx*6.2831 + vec3(0.0,2.1,4.2));' +
+                    ' float band = smoothstep(0.45,0.5,abs(fract(vUv.y*8.0 - uTime*0.25)-0.5));' +
+                    ' col = mix(col, vec3(1.0), band*0.25);' +
+                    ' gl_FragColor = vec4(col,1.0); }'
+            });
+            const fragmentExhibit = new THREE.Group();
+            fragmentExhibit.add(makePedestal());
+            const fragmentBall = new THREE.Mesh(new THREE.SphereGeometry(0.28, 32, 24), fragmentMat);
+            fragmentBall.position.y = 0.95; fragmentExhibit.add(fragmentBall);
+            shaderSpinners.push(fragmentBall);
+            const fragmentLabel = makeLabelSprite('Fragment Shader', 'rgba(180,60,120,0.85)');
+            fragmentLabel.position.y = 1.38; fragmentExhibit.add(fragmentLabel);
+            fragmentExhibit.position.set(1.2, 0, 1.5);
+            garden.add(fragmentExhibit);
+
+            // รั้วไม้ไผ่เตี้ยรูปตัว U (เว้นด้านหน้าทางเดินไว้)
             const bambooMat = new THREE.MeshStandardMaterial({ color: 0xc2a878, roughness: 0.9 });
             function fenceRun(x0, z0, x1, z1) {
                 const len = Math.hypot(x1 - x0, z1 - z0);
@@ -321,6 +398,8 @@
                     c.position.x += 0.003 + i * 0.001;
                     if (c.position.x > 14) c.position.x = -14;
                 });
+                shaderTime.value += 0.016;
+                shaderSpinners.forEach((m, i) => { m.rotation.y += 0.008 + i * 0.003; });
                 requestAnimationFrame(drift);
             })();
         })();
@@ -680,7 +759,8 @@
         new THREE.GLTFLoader().load('./Paiy.glb', (gltf) => {
             paiyRoot = gltf.scene;
             const paiy = paiyRoot;
-
+            // ร่นป้ายไปทางซ้าย ~0.7m ให้พ้นแนวกล้อง (0,2,5) -> ของโชว์ Vertex (-1.5,1.5)
+            paiy.position.x -= 0.7;
             scene.add(paiy);
 
 
