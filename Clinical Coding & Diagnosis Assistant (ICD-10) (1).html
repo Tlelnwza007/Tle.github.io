@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clinical Coding &amp; Diagnosis Assistant (ICD-10)</title>
+<style>
+:root{--bg:#f6f8fa;--card:#fff;--tx:#1b2430;--mu:#5b6776;--bd:#dde3ea;--ac:#0b6e8a;--ac2:#e3f3f8;--wn:#8a5a00;--wnbg:#fff4dc;--sq:#6b3fa0;--sqbg:#f0e8fa;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12171d;--card:#1b222b;--tx:#e6ebf1;--mu:#9aa7b6;--bd:#2c3744;--ac:#5cc3de;--ac2:#14323c;--wn:#f0c36a;--wnbg:#3a2f13;--sq:#c9a6f0;--sqbg:#2e2340}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12171d;--card:#1b222b;--tx:#e6ebf1;--mu:#9aa7b6;--bd:#2c3744;--ac:#5cc3de;--ac2:#14323c;--wn:#f0c36a;--wnbg:#3a2f13;--sq:#c9a6f0;--sqbg:#2e2340}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.6 "Sarabun","Noto Sans Thai",system-ui,sans-serif}
+.w{max-width:960px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.4rem;margin:0 0 4px}h2{font-size:1.05rem;margin:0 0 8px}
+.sub{color:var(--mu);margin:0 0 16px;font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:14px}
+label{display:block;font-weight:600;margin-bottom:6px}
+textarea{width:100%;min-height:120px;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+button{font:inherit;padding:9px 16px;border-radius:8px;border:1px solid var(--ac);cursor:pointer;background:var(--ac);color:#fff;font-weight:600}
+button.s{background:transparent;color:var(--ac)}button:disabled{opacity:.5;cursor:wait}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+.code{display:inline-block;font:700 1.05rem ui-monospace,Menlo,monospace;background:var(--ac2);color:var(--ac);padding:2px 9px;border-radius:6px;margin-right:8px}
+.code.sq{background:var(--sqbg);color:var(--sq)}
+.it{padding:8px 0;border-top:1px solid var(--bd)}.it:first-of-type{border-top:0}
+.tag{font-size:.75rem;border-radius:99px;padding:1px 8px;background:var(--sqbg);color:var(--sq);margin-left:4px}
+.tag.w{background:var(--wnbg);color:var(--wn)}
+.mu{color:var(--mu);font-size:.9rem}
+.wn{background:var(--wnbg);color:var(--wn);border-radius:8px;padding:10px 12px;font-size:.88rem}
+ul{margin:6px 0;padding-left:20px}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}td,th{border-bottom:1px solid var(--bd);padding:6px 8px;text-align:left;vertical-align:top}
+#err{color:#c0392b;margin-top:10px}
+.h{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--bd)}.h:first-of-type{border-top:0}
+.h .m{flex:1;min-width:0;cursor:pointer}.h .m div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.x{padding:4px 10px;font-size:.85rem;background:transparent;color:#c0392b;border-color:#c0392b}
+</style>
+</head>
+<body>
+<div class="w">
+<h1>🩺 Clinical Coding &amp; Diagnosis Assistant</h1>
+<p class="sub">ผู้ช่วยให้รหัสโรค ICD-10 (WHO 2016) สำหรับแพทย์และนักเวชสถิติ · อ้างอิงหลักเกณฑ์ Thai Standard Coding Guidelines</p>
+
+<div class="card">
+<h2>1. ข้อมูลนำเข้า (Input)</h2>
+<div class="grid">
+<div><label for="c">ข้อมูลทางคลินิก / ประวัติผู้ป่วย<br><span class="mu">Clinical Case / History</span></label><textarea id="c" placeholder="อายุ เพศ อาการสำคัญ ประวัติโรคเดิม การรักษา ผลตรวจ..."></textarea></div>
+<div><label for="d">คำวินิจฉัยของแพทย์<br><span class="mu">Physician's Diagnosis</span></label><textarea id="d" placeholder="Principal diagnosis, comorbidity, complication..."></textarea></div>
+</div>
+<div class="row"><button id="go">🔍 วิเคราะห์และให้รหัส</button><button class="s" id="ex">📋 ใส่เคสตัวอย่าง</button><button class="s" id="cl">ล้าง</button></div>
+<div id="err"></div>
+</div>
+
+<div id="out" hidden>
+<div class="card"><h2>🎯 รหัสโรคหลัก (Principal Diagnosis – PDx)</h2><div id="pdx"></div></div>
+<div class="card"><h2>🧩 โรคร่วม / โรคแทรกซ้อน / รหัสสาเหตุ (Comorbidity, Complication &amp; Sequelae)</h2><div id="co"></div></div>
+<div class="card"><h2>📖 เกณฑ์การให้รหัสตาม Guideline</h2><div id="gd"></div></div>
+<div class="card"><h2>🔗 รหัสที่เกี่ยวข้องเพิ่มเติม (Related ICD-10 Codes)</h2><div class="sc" id="rl"></div></div>
+<div class="wn" id="src"></div>
+</div>
+<div class="card"><h2>🕘 ประวัติการวิเคราะห์ (History)</h2><div class="mu" style="margin-bottom:6px">เก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่แชร์ให้ผู้อื่น · ห้ามใส่ชื่อ/HN/เลขบัตรประชาชน</div><div id="hl"></div><div class="row"><button class="x" id="hc">ลบประวัติทั้งหมด</button></div></div>
+<p class="mu">⚠️ เครื่องมือช่วยตรวจทานเท่านั้น ผู้ให้รหัสต้องตรวจสอบกับ ICD-10 Vol.1/3 และเวชระเบียนฉบับจริงก่อนบันทึก ไม่ใช้แทนดุลยพินิจของแพทย์/นักเวชสถิติ</p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const EX={c:"ผู้ป่วยชาย อายุ 40 ปี มาโรงพยาบาลด้วยอาการชักเกร็งกระตุกแขนขวา ร่วมกับมีอาการเหม่อลอย ไม่ตอบสนอง และพฤติกรรมซ้ำๆ (automatism) นาน 2 นาที มีประวัติเคยเป็นวัณโรคสมอง (TB of brain) รักษาครบแล้วและหายแล้ว ไม่มีการติดเชื้อที่ยังดำเนินอยู่ ผล MRI พบแผลเป็น (gliosis) ที่ temporal lobe ซ้าย",d:"Focal epilepsy, complex partial seizures (symptomatic, from old TB of brain)"};
+// Offline fallback for the built-in sample case
+const DEMO={
+pdx:{code:"G40.2",desc:"Localization-related (focal) (partial) symptomatic epilepsy and epileptic syndromes with complex partial seizures",why:"แพทย์วินิจฉัย focal epilepsy ชนิด complex partial seizures ซึ่งเป็นภาวะที่ทำให้ผู้ป่วยมารับบริการในครั้งนี้"},
+co:[{code:"B90.0",desc:"Sequelae of central nervous system tuberculosis",type:"Sequela",note:"รหัสสาเหตุของโรคเดิมที่หายแล้ว ใช้เป็นรหัสเสริม (additional code) ตามหลัง G40.2"}],
+guideline:["<b>Sequelae (B90–B94, Y85–Y89):</b> เมื่อโรคติดเชื้อเดิมหายแล้วแต่ยังมีภาวะตกค้าง ให้รหัส <i>ภาวะตกค้าง (residual condition)</i> เป็นรหัสหลัก แล้วตามด้วยรหัสกลุ่ม Sequelae เพื่อระบุสาเหตุ","<b>ไม่ใช้ A17.- (Tuberculosis of nervous system):</b> วัณโรคสมองรักษาหายแล้ว ไม่มีการติดเชื้อที่ดำเนินอยู่ การใช้ A17.- จะหมายถึงโรคยังกำเนิดอยู่ (active) ซึ่งไม่ตรงกับข้อเท็จจริง","<b>ไม่ใช้ Z86.1 (Personal history of infectious and parasitic diseases) เพียงอย่างเดียว:</b> เพราะผู้ป่วยยังมีภาวะตกค้างทางคลินิก (ชัก) ที่เป็นผลของโรคเดิม Z86.1 ใช้เมื่อไม่มี residual","<b>Mortality/Morbidity coding:</b> ลำดับรหัส G40.2 (manifestation ที่รักษา) → B90.0 (sequela) ไม่ควรใช้ B90.0 เป็น PDx"],
+rel:[{code:"G40.0",desc:"Localization-related idiopathic epilepsy with seizures of localized onset",diff:"ไม่ทราบสาเหตุ (idiopathic) — ไม่ตรงเพราะมีสาเหตุจาก TB เดิม"},{code:"G40.1",desc:"Symptomatic localization-related epilepsy with simple partial seizures",diff:"ไม่มีการสูญเสียการรู้ตัว — ไม่ตรงกับ complex"},{code:"G40.2",desc:"Symptomatic localization-related epilepsy with complex partial seizures",diff:"✔ ตรงกับคำวินิจฉัย (มี impaired consciousness)"},{code:"G40.3",desc:"Generalized idiopathic epilepsy and epileptic syndromes",diff:"ชนิด generalized — ไม่ตรง"},{code:"G40.9",desc:"Epilepsy, unspecified",diff:"ใช้เมื่อไม่ระบุชนิด — แพทย์ระบุชนิดแล้ว"},{code:"A17.8",desc:"Other tuberculosis of nervous system",diff:"สำหรับ TB ที่ยัง active — ไม่ใช้"},{code:"Z86.1",desc:"Personal history of infectious and parasitic diseases",diff:"ใช้เมื่อหายสนิทไม่มี residual — ไม่ใช้เป็นรหัสเดียว"},{code:"R56.8",desc:"Other and unspecified convulsions",diff:"เป็นอาการ — ไม่ใช้เมื่อมีวินิจฉัยเฉพาะแล้ว"}],
+source:"ผลลัพธ์จากฐานความรู้ในตัวเครื่อง (เคสตัวอย่าง)"};
+
+const PROMPT=c=>`You are an expert ICD-10 clinical coder (WHO ICD-10 2016 Volume 1/3 and Thai Standard Coding Guidelines / Thai ICD-10-TM). Analyse the case and return ONLY valid JSON (no markdown) in this exact shape, with explanatory text in Thai (medical terms in English):
+{"pdx":{"code":"","desc":"","why":""},
+"co":[{"code":"","desc":"","type":"Comorbidity|Complication|Sequela|Cause|History","note":""}],
+"guideline":["Thai explanation of each coding rule applied, incl. why resolved/old diseases are NOT coded as active and which sequela/history rules apply"],
+"rel":[{"code":"","desc":"","diff":"why it is or is not chosen (differential coding)"}]}
+Rules: use real ICD-10 WHO 2016 codes only; follow sequela rule (residual condition first, then B90-B94/Y85-Y89 as additional); use Z85/Z86/Z87 history codes only when no residual; code to the highest specificity the documentation supports; if documentation is insufficient say so in "why"; list 5-8 related codes from the same category. Do not invent codes.
+CASE:\n${c}`;
+
+function row(x){return `<div class="it"><span class="code${/sequel/i.test(x.type||"")?" sq":""}">${esc(x.code)}</span><b>${esc(x.desc)}</b>${x.type?`<span class="tag">${esc(x.type)}</span>`:""}${x.note?`<div class="mu">${esc(x.note)}</div>`:""}</div>`}
+function render(r,src){
+$("pdx").innerHTML=`<span class="code">${esc(r.pdx.code)}</span><b>${esc(r.pdx.desc)}</b><div class="mu">${esc(r.pdx.why)}</div>`;
+$("co").innerHTML=(r.co&&r.co.length)?r.co.map(row).join(""):'<span class="mu">ไม่พบโรคร่วม/โรคแทรกซ้อนที่ต้องให้รหัสเพิ่มจากข้อมูลที่ให้</span>';
+$("gd").innerHTML="<ul>"+(r.guideline||[]).map(g=>`<li>${g.includes("<b>")?g:esc(g)}</li>`).join("")+"</ul>";
+$("rl").innerHTML="<table><tr><th>รหัส</th><th>คำอธิบาย</th><th>ตรวจสอบ (Differential)</th></tr>"+(r.rel||[]).map(x=>`<tr${x.code===r.pdx.code?' style="background:var(--ac2)"':""}><td><b>${esc(x.code)}</b></td><td>${esc(x.desc)}</td><td>${esc(x.diff)}</td></tr>`).join("")+"</table>";
+$("src").textContent=src;$("out").hidden=false;$("out").scrollIntoView({behavior:"smooth"});
+}
+const HK="icd10_history_v1";let H=[];
+try{H=JSON.parse(localStorage.getItem(HK)||"[]")}catch(e){H=[]}
+function persist(){try{localStorage.setItem(HK,JSON.stringify(H.slice(0,50)))}catch(e){}}
+function saveHist(c,d,r,src){H.unshift({t:Date.now(),c,d,r,src});H=H.slice(0,50);persist();showHist()}
+function showHist(){
+$("hl").innerHTML=H.length?H.map((x,i)=>`<div class="h"><div class="m" data-o="${i}"><div><span class="code">${esc(x.r.pdx.code)}</span>${(x.r.co||[]).map(k=>`<span class="code sq">${esc(k.code)}</span>`).join("")}</div><div class="mu">${esc(new Date(x.t).toLocaleString("th-TH"))} · ${esc((x.d||x.c).slice(0,70))}</div></div><button class="x" data-d="${i}">ลบ</button></div>`).join(""):'<span class="mu">ยังไม่มีประวัติ</span>'}
+$("hl").onclick=e=>{const o=e.target.closest("[data-o]"),d=e.target.closest("[data-d]");
+if(d){H.splice(+d.dataset.d,1);persist();showHist()}
+else if(o){const x=H[+o.dataset.o];$("c").value=x.c;$("d").value=x.d;render(x.r,x.src+" (จากประวัติ)")}};
+$("hc").onclick=()=>{if(H.length&&confirm("ลบประวัติทั้งหมด?")){H=[];persist();showHist()}};
+showHist();
+$("ex").onclick=()=>{$("c").value=EX.c;$("d").value=EX.d};
+$("cl").onclick=()=>{$("c").value=$("d").value="";$("out").hidden=true;$("err").textContent=""};
+$("go").onclick=async()=>{
+const c=$("c").value.trim(),d=$("d").value.trim();$("err").textContent="";
+if(!c&&!d){$("err").textContent="กรุณากรอกข้อมูลทางคลินิกหรือคำวินิจฉัยของแพทย์";return}
+const b=$("go");b.disabled=true;b.textContent="กำลังวิเคราะห์...";
+try{
+let r=null,src="";
+const sample=await claude.use("sample");
+if(sample){try{r=await sample.json(PROMPT(`Clinical case / history:\n${c}\n\nPhysician's diagnosis:\n${d}`),{modelTier:"complex"});src="วิเคราะห์โดย Claude อ้างอิง WHO ICD-10 2016 และแนวทางของไทย — โปรดตรวจสอบกับต้นฉบับก่อนใช้งานจริง"}catch(e){if(e&&e.code==="not_granted")$("err").textContent="ไม่ได้รับอนุญาตให้ใช้ AI ในหน้านี้"}}
+if(!r&&/epilep|ชัก/i.test(c+d)&&/tb|tubercul|วัณโรค/i.test(c+d)&&EX.d===EX.d){r=DEMO;src=DEMO.source}
+if(!r||!r.pdx)throw new Error("ไม่สามารถวิเคราะห์ได้ในขณะนี้ — ลองอีกครั้ง หรือใช้เคสตัวอย่าง");
+render(r,src);saveHist(c,d,r,src);
+}catch(e){$("err").textContent=(e&&e.message)||"เกิดข้อผิดพลาด"}
+finally{b.disabled=false;b.textContent="🔍 วิเคราะห์และให้รหัส"}};
+</script>
+</body>
+</html>
